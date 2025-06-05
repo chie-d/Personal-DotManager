@@ -1,7 +1,7 @@
 program dotmanager;
 {$mode objfpc}{$H+}{$C+}
 
-uses SysUtils, fpjson, jsonparser, Process;
+uses SysUtils, fpjson, jsonparser, Process, Classes;
 
 type
   TDotfile = record
@@ -10,29 +10,50 @@ type
     IsDirty: Boolean;
     MultiFiles: Boolean;
   end;
+  TDotFileArray = array of TDotFile;
+  
 {
 function SyncLocalRepo(ALocalRepo: String; ADotfiles: array of TDotfile): Boolean;
 begin
 
 end;
 }
+
+procedure CopyFile(const Src, Dist: String);
+var
+   SourceStream, DistStream: TFileStream;
+begin
+   SourceStream:= TFileStream.Create(Src, fmOpenRead) ;
+   try
+      DistStream:= TFileStream.Create(Dist, fmCreate);
+      try
+         DistStream.copyFrom(SourceStream, SourceStream.Size);
+      finally
+        DistStream.Free
+      end;
+   finally
+      SourceStream.Free;
+   end;
+end;
+
+
 function SyncRemoteRepo(ARemoteRepo: String; ADotfiles: array of TDotfile): Boolean;
 begin
   {NOTE: this is just for pushing the local to remote repo}
   {NOTE: First check if the config folder isDiry then maybe copy to the temp local repo }
   {NOTE: then push the temp local repo to the remote repo}
   {NOTE: After doing that fetch the remote repo and restor the files to the config folder}
+   Result:= True;
 end;
 
 procedure RestoreDotFiles(ADotfiles: array of TDotfile);
 begin
     {NOTE: This will be useful when using it in a new system}
     {NOTE: For now it doesn't matter yet}
+   
 end;
 
-
-
-function GetDirtyFiles(Adotfiles: array of TDotfile): TArray<TDotfile>;
+function GetDirtyFiles(ADotfiles: array of TDotfile): TDotFileArray;
 var
   I, J: Integer;
   Output: string;
@@ -40,6 +61,7 @@ var
   Dirty: array of TDotfile;
   DotfileName: string;
 begin
+   SetLength(Dirty, 0);
   Lines := TStringList.Create;
   try
     for I := 0 to High(Adotfiles) do
@@ -73,13 +95,14 @@ var
   I: Integer;
 begin
 {NOTE: this is useful incase I want a temp unified folder}
-  for I := 0 to Length(ADotfiles) do
+  for I := 0 to High(ADotfiles) do
     begin
       if not Adotfiles[I].multifiles then
         begin
           if FileExists(Adotfiles[I].location + ADotfiles[I].Name) then
            begin
              WriteLn('Copying ' + Adotfiles[I].Name + ' to ' + ALocalRepo);
+
              CopyFile(Adotfiles[I].location + ADotfiles[I].Name, ALocalRepo + ADotfiles[I].Name);
            end else WriteLn('File not found: ' + Adotfiles[I].Name);
         end else 
@@ -109,7 +132,7 @@ begin
   end;
 end;
 
-function GetDotfiles(): array of dotfile;
+function GetDotfiles(): TDotFileArray;
 var
   JSONData: TJSONData;
   JSONArray: TJSONArray;
@@ -122,7 +145,7 @@ begin
   FileContent := ReadDataFile('dotfiles.json');
   JSONData := GetJSON(FileContent);
   try
-  if JsonData.JSONType <> jtArray then
+  if JsonData.JSONType = jtArray then
     begin
       JSONArray := TJSONArray(JSONData);
       SetLength(DotfilesList, JSONArray.Count);
@@ -130,10 +153,10 @@ begin
         begin
           with TJSONObject(JSONArray.Items[I]) do
             begin
-              Dotfile.Name := GetValue('Name');
-              Dotfile.Location := GetValue('location');
+              Dotfile.Name := Get('name', '');
+              Dotfile.Location := Get('location', '');
               Dotfile.IsDirty := False;
-              Dotfile.MultiFiles := GetValue('multifiles');
+              Dotfile.MultiFiles := Get('multifiles', False);
             end;
           DotfilesList[I] := Dotfile;
         end;
