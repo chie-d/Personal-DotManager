@@ -3,6 +3,10 @@ program dotmanager;
 
 uses SysUtils, fpjson, jsonparser, Process, Classes;
 
+
+
+
+
 type
   TDotfile = record
     Name: string;
@@ -10,48 +14,9 @@ type
     IsDirty: Boolean;
     MultiFiles: Boolean;
   end;
+
   TDotFileArray = array of TDotFile;
   
-{
-function SyncLocalRepo(ALocalRepo: String; ADotfiles: array of TDotfile): Boolean;
-begin
-
-end;
-}
-
-procedure CopyFile(const Src, Dist: String);
-var
-   SourceStream, DistStream: TFileStream;
-begin
-   SourceStream:= TFileStream.Create(Src, fmOpenRead) ;
-   try
-      DistStream:= TFileStream.Create(Dist, fmCreate);
-      try
-         DistStream.copyFrom(SourceStream, SourceStream.Size);
-      finally
-        DistStream.Free
-      end;
-   finally
-      SourceStream.Free;
-   end;
-end;
-
-
-function SyncRemoteRepo(ARemoteRepo: String; ADotfiles: array of TDotfile): Boolean;
-begin
-  {NOTE: this is just for pushing the local to remote repo}
-  {NOTE: First check if the config folder isDiry then maybe copy to the temp local repo }
-  {NOTE: then push the temp local repo to the remote repo}
-  {NOTE: After doing that fetch the remote repo and restor the files to the config folder}
-   Result:= True;
-end;
-
-procedure RestoreDotFiles(ADotfiles: array of TDotfile);
-begin
-    {NOTE: This will be useful when using it in a new system}
-    {NOTE: For now it doesn't matter yet}
-   
-end;
 
 function GetDirtyFiles(ADotfiles: array of TDotfile): TDotFileArray;
 var
@@ -90,6 +55,25 @@ begin
   end;
 end;
 
+procedure CopyFile(const Src, Dist: String);
+var
+   SourceStream, DistStream: TFileStream;
+begin
+   SourceStream:= TFileStream.Create(Src, fmOpenRead) ;
+   try
+      DistStream:= TFileStream.Create(Dist, fmCreate);
+      try
+         DistStream.copyFrom(SourceStream, SourceStream.Size);
+      finally
+        DistStream.Free
+      end;
+   finally
+      SourceStream.Free;
+   end;
+end;
+
+
+
 procedure CopyToLocalRepo(ALocalRepo: String; ADotfiles: array of TDotfile);
 var
   I: Integer;
@@ -111,6 +95,42 @@ begin
           Writeln('Multi Files DotFiles Not Implemented yet');
         end;
     end;
+end;
+
+
+procedure SyncLocalRepo(ALocalRepo: String; ADotfiles: array of TDotfile);
+var 
+  DirtyFiles: TDotFileArray;
+  Output: String;
+begin
+  DirtyFiles := GetDirtyFiles(ADotfiles);
+  if Length(DirtyFiles) = 0 then
+    begin
+      WriteLn('No dotfiles changes detected');
+      Exit;
+    end;
+  CopyToLocalRepo(ALocalRepo, DirtyFiles);
+  RunCommand('git', ['-C', ALocalRepo, 'add', '.'], Output);
+  RunCommand('git', ['-C', ALocalRepo, 'commit', '-m', '"dotmanager sync"'], Output); {TODO: get an interactive prompt for commit message if chosen to by config}
+  RunCommand('git', ['-C', ALocalRepo, 'push'], Output);
+end;
+
+
+
+function SyncRemoteRepo(ARemoteRepo: String; ADotfiles: array of TDotfile): Boolean;
+begin
+  {NOTE: this is just for pushing the local to remote repo}
+  {NOTE: First check if the config folder isDiry then maybe copy to the temp local repo }
+  {NOTE: then push the temp local repo to the remote repo}
+  {NOTE: After doing that fetch the remote repo and restor the files to the config folder}
+   Result:= True;
+end;
+
+procedure RestoreDotFiles(ADotfiles: array of TDotfile);
+begin
+    {NOTE: This will be useful when using it in a new system}
+    {NOTE: For now it doesn't matter yet}
+   
 end;
 
 function ReadDataFile(const AFileName: string): String;
@@ -167,10 +187,25 @@ begin
   end;
 end;
 
-  {TODO: Copy those files to local repo}
-  {TODO: Sync local repo with remote repo}
+procedure ListDotfiles(ADotfiles: array of TDotfile);
+var
+  DirtyFiles: TDotFileArray;
+  I: Integer;
+begin
+  DirtyFiles := GetDirtyFiles(ADotfiles);
+  for I := 0 to High(DirtyFiles) do
+    begin
+      Write(DirtyFiles[I].Name + ' : ');
+      if Adotfiles[I].IsDirty then
+        WriteLn('Changed') {TODO: make it red or something}
+      else
+        WriteLn('Not Changed');{TODO: Green color}
+    end;
+end;
 
-{TODO: read dotfiles from a JSON}
+
+
+
 
 begin
 end.
