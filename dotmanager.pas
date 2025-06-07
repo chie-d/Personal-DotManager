@@ -84,8 +84,7 @@ begin
           if FileExists(Adotfiles[I].location + ADotfiles[I].Name) then
            begin
              WriteLn('Copying ' + Adotfiles[I].Name + ' to ' + ALocalRepo);
-
-             CopyFile(Adotfiles[I].location + ADotfiles[I].Name, ALocalRepo + ADotfiles[I].Name);
+CopyFile(Adotfiles[I].location + ADotfiles[I].Name, ALocalRepo + ADotfiles[I].Name);
            end else WriteLn('File not found: ' + Adotfiles[I].Name);
         end else 
         begin
@@ -100,9 +99,10 @@ procedure SyncLocalRepo(ALocalRepo: String; ADotfiles: array of TDotfile);
 var 
   DirtyFiles: TDotFileArray;
   Output: String;
+  I: Integer;
 begin
   DirtyFiles := GetDirtyFiles(ADotfiles);
-  if Not Length(DirtyFiles) = 0 then
+  if Length(DirtyFiles) = 0 then
     begin
       WriteLn('No dotfiles changes detected');
       Exit;
@@ -112,6 +112,11 @@ begin
   RunCommand('git', ['-C', ALocalRepo, 'add', '.'], Output);
   RunCommand('git', ['-C', ALocalRepo, 'commit', '-m', '"dotmanager sync"'], Output); {TODO: get an interactive prompt for commit message if chosen to by config}
   {RunCommand('git', ['-C', ALocalRepo, 'push'], Output);}
+
+  {Cleaning}
+  for i := 0 to High(DirtyFiles) do
+    dirtyFiles[i].IsDirty := False;
+
 end;
 
 
@@ -224,7 +229,11 @@ begin
   {setLength(dotfiles, 0);}
   dotfiles := GetDotfiles();
   listDotfiles(dotfiles);
+  {TODO: if first use, restore files if they exists in remote repo by reading the config}
+  {TODO: or wait for restore command}
+  {TODO: if not then check for dirty files then sync them}
+
   {dirtyFiles := GetDirtyFiles(dotfiles);}
-  copyToLocalRepo(localRepo, dotfiles);
-  syncLocalRepo(localRepo, dotfiles);
+  {copyToLocalRepo(localRepo, dirtyFiles);}
+  {syncLocalRepo(localRepo, dirtyFiles);}
 end.
