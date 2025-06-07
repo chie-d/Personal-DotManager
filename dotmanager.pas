@@ -1,9 +1,7 @@
 program dotmanager;
 {$mode objfpc}{$H+}{$C+}
 
-uses SysUtils, fpjson, jsonparser, Process, Classes;
-
-
+uses SysUtils, fpjson, jsonparser, Process, Classes, Crt;
 
 
 
@@ -104,15 +102,16 @@ var
   Output: String;
 begin
   DirtyFiles := GetDirtyFiles(ADotfiles);
-  if Length(DirtyFiles) = 0 then
+  if Not Length(DirtyFiles) = 0 then
     begin
       WriteLn('No dotfiles changes detected');
       Exit;
     end;
   CopyToLocalRepo(ALocalRepo, DirtyFiles);
+  {TODO: check if is a git repo using .git dir, if not just git init}
   RunCommand('git', ['-C', ALocalRepo, 'add', '.'], Output);
   RunCommand('git', ['-C', ALocalRepo, 'commit', '-m', '"dotmanager sync"'], Output); {TODO: get an interactive prompt for commit message if chosen to by config}
-  RunCommand('git', ['-C', ALocalRepo, 'push'], Output);
+  {RunCommand('git', ['-C', ALocalRepo, 'push'], Output);}
 end;
 
 
@@ -161,10 +160,11 @@ var
   Dotfile: TDotfile;
   FileContent: String;
 begin
-  {TODO: read dotfiles from a JSON}
-  FileContent := ReadDataFile('dotfiles.json');
-  JSONData := GetJSON(FileContent);
+  SetLength(DotfilesList, 0);
   try
+  try
+  FileContent := ReadDataFile('./dotfiles.json');
+  JSONData := GetJSON(FileContent);
   if JsonData.JSONType = jtArray then
     begin
       JSONArray := TJSONArray(JSONData);
@@ -181,31 +181,50 @@ begin
           DotfilesList[I] := Dotfile;
         end;
     end;
-  Result := DotfilesList;
+  Except
+    on E: Exception do
+      begin
+        WriteLn('Error reading dotfiles.json ', E.Message);
+      end;
+    end;
   Finally
     JsonData.Free;
   end;
+  Result := DotfilesList;
 end;
 
 procedure ListDotfiles(ADotfiles: array of TDotfile);
 var
-  DirtyFiles: TDotFileArray;
   I: Integer;
 begin
-  DirtyFiles := GetDirtyFiles(ADotfiles);
-  for I := 0 to High(DirtyFiles) do
+  WriteLn('Listing dotfiles: ', length(ADotfiles));
+  for I := 0 to High(Adotfiles) do
     begin
-      Write(DirtyFiles[I].Name + ' : ');
       if Adotfiles[I].IsDirty then
-        WriteLn('Changed') {TODO: make it red or something}
-      else
-        WriteLn('Not Changed');{TODO: Green color}
+        begin
+          TextColor(Red);
+          Writeln(Adotfiles[I].Name + ' : ');
+        end
+      else 
+        begin
+          TextColor(Green);
+          Writeln(Adotfiles[I].Name + ' : ');
+        end;
     end;
 end;
 
 
-
-
-
+var
+  dotfiles: TDotFileArray;
+  dirtyFiles: TdotFileArray;
+  LocalRepo: String;
 begin
+  localRepo := '../local/'; {TODO: Read this from a config file}
+  {TODO: read commands from command line arguments}
+  {setLength(dotfiles, 0);}
+  dotfiles := GetDotfiles();
+  listDotfiles(dotfiles);
+  {dirtyFiles := GetDirtyFiles(dotfiles);}
+  copyToLocalRepo(localRepo, dotfiles);
+  syncLocalRepo(localRepo, dotfiles);
 end.

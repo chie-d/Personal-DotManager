@@ -1,0 +1,12 @@
+[
+  {
+    "name": ".bashrc",
+    "location": "/home/chie/",
+    "multifiles": false
+  },
+  {
+    "name": ".bash_profile",
+    "location": "/home/chie/",
+    "multifiles": false
+  }
+]
