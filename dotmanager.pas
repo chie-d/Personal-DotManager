@@ -1,7 +1,7 @@
 program dotmanager;
 {$mode objfpc}{$H+}{$C+}
 
-uses SysUtils, fpjson, jsonparser, Process, Classes, Crt;
+uses SysUtils, fpjson, jsonparser, Process, Classes, Crt, IniFiles;
 
 
 
@@ -11,6 +11,10 @@ type
     Location: string;
     IsDirty: Boolean;
     MultiFiles: Boolean;
+  end;
+  TConfig = record
+    LocalRepo: String;
+    RemoteRepo: String;
   end;
 
   TDotFileArray = array of TDotFile;
@@ -218,17 +222,32 @@ begin
     end;
 end;
 
+function ReadConfigFile(const AFileName: string): TConfig;
+var
+  ConfigIni: TIniFile;
+  config: TConfig;
+begin
+  ConfigIni := TIniFile.Create(AFileName);
+  try
+    config.LocalRepo := ConfigIni.ReadString('Config', 'local_repository', '../local/');
+    config.RemoteRepo := ConfigIni.ReadString('Config', 'remote_repository', '');
+    Result := config;
+  finally
+    ConfigIni.Free;
+  end;
+end;
+
 
 var
   dotfiles: TDotFileArray;
   dirtyFiles: TdotFileArray;
-  LocalRepo: String;
+  config: TConfig;
 begin
-  localRepo := '../local/'; {TODO: Read this from a config file}
   {TODO: read commands from command line arguments}
   {setLength(dotfiles, 0);}
   dotfiles := GetDotfiles();
   listDotfiles(dotfiles);
+  config := ReadConfigFile('./config.ini');
   {TODO: if first use, restore files if they exists in remote repo by reading the config}
   {TODO: or wait for restore command}
   {TODO: if not then check for dirty files then sync them}
