@@ -27,13 +27,15 @@ var
   Lines: TStringList;
   Dirty: array of TDotfile;
   DotfileName: string;
+  Config: TConfig;
 begin
    SetLength(Dirty, 0);
+   config := ReadConfigFile('./config.ini');
   Lines := TStringList.Create;
   try
     for I := 0 to High(Adotfiles) do
     begin
-      if RunCommand('git', ['-C', Adotfiles[I].Location, 'status', '--porcelain'], Output) then
+      if RunCommand('git', ['-C', config.localRepo, 'status', '--porcelain'], Output) = 0 then
       begin
         Lines.Text := Output;
         for J := 0 to Lines.Count - 1 do
@@ -96,6 +98,14 @@ CopyFile(Adotfiles[I].location + ADotfiles[I].Name, ALocalRepo + ADotfiles[I].Na
           Writeln('Multi Files DotFiles Not Implemented yet');
         end;
     end;
+end;
+
+
+procudere AutoSync(source, localRepo: String);
+var
+  
+begin
+   
 end;
 
 
